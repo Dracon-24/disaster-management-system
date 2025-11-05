@@ -4,7 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = "dracon24/disaster-management-system"
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-        NODE_ENV = "production"
         INVENTORY_FILE = "inventory"
     }
 
