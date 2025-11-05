@@ -21,15 +21,13 @@ pipeline {
 
     stage('Install Dependencies & Build') {
         steps {
-            echo "Installing dependencies and building project..."
             sh '''
-                # Always include devDependencies for Vite build
-                export NODE_ENV=development
-                npm ci
-                npm run build
+                npm ci --include=dev        # install prod + dev packages
+                npx vite build              # run vite via npx
             '''
         }
     }
+
 
 
         stage('Run Tests') {
