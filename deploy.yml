@@ -1,26 +1,63 @@
 ---
-- name: Deploy uptime webapp locally
+- name: 🚀 Deploy Disaster Management System Web App
   hosts: local
   become: yes
+  vars:
+    container_name: disaster-webapp
+    image_name: dracon24/disaster-management-system:latest
+    host_port: 8085
+    container_port: 80
 
   tasks:
+    # ------------------------------
+    # Ensure Docker is installed & running
+    # ------------------------------
+    - name: Ensure Docker is installed
+      package:
+        name: docker
+        state: present
+
     - name: Ensure Docker service is running
       service:
         name: docker
         state: started
         enabled: yes
 
-    - name: Stop and remove old container (if any)
-      command: docker rm -f uptime-webapp
+    # ------------------------------
+    # Stop and remove old container
+    # ------------------------------
+    - name: Stop old container if running
+      command: docker stop {{ container_name }}
       ignore_errors: yes
 
-    - name: Pull latest image from Docker Hub
-      command: docker pull dracon24/uptime-webapp:latest
+    - name: Remove old container
+      command: docker rm {{ container_name }}
+      ignore_errors: yes
 
-    - name: Run the container
+    # ------------------------------
+    # Pull latest image from Docker Hub
+    # ------------------------------
+    - name: Pull latest image
+      command: docker pull {{ image_name }}
+
+    # ------------------------------
+    # Run the new container
+    # ------------------------------
+    - name: Run web container
       command: >
         docker run -d
-        --name uptime-webapp
-        -p 8085:3000
-        dracon24/uptime-webapp:latest
+        --name {{ container_name }}
+        -p {{ host_port }}:{{ container_port }}
+        --restart unless-stopped
+        {{ image_name }}
 
+    # ------------------------------
+    # Verify container status
+    # ------------------------------
+    - name: Check running containers
+      command: docker ps
+      register: docker_ps_output
+
+    - name: Display container info
+      debug:
+        var: docker_ps_output.stdout

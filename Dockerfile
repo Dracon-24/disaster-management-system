@@ -1,35 +1,32 @@
-# ---------- Multi-stage Node build ----------
-FROM node:18-alpine AS builder
+# ============================
+# Stage 1: Build React/Vite App
+# ============================
+FROM node:20-alpine AS build
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy package files
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --force --prefer-offline --no-audit
 
-# Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Detect and build depending on the tool
+RUN if [ -f "vite.config.ts" ] || [ -f "vite.config.js" ]; then \
+      npm run build && mv dist build; \
+    else \
+      npm run build; \
+    fi
 
-# ---------- Production stage ----------
-FROM node:18-alpine AS production
+# ============================
+# Stage 2: Serve Built App
+# ============================
+FROM nginx:stable-alpine
 
-WORKDIR /app
+# Copy build output from previous stage
+COPY --from=build /usr/src/app/build /usr/share/nginx/html
 
-# Install serve for static file serving
-RUN npm install -g serve
+# Optional React Router support
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built app from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
-USER nextjs
-
-EXPOSE 3000
-
-# Serve built app
-CMD ["serve", "-s", "dist", "-l", "3000"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
